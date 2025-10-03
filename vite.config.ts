@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 export default defineConfig({
+  base: '/rzn_chatbot_/', // ✅ أضف هذا السطر
   plugins: [react()],
   resolve: {
     alias: {
