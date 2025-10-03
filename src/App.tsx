@@ -30,7 +30,7 @@ const App = () => (
               <Route path="/chat" element={<Chat />} />
               <Route path="/meal-plan" element={<MealPlan />} />
               <Route path="/records" element={<Records />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<Home />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
