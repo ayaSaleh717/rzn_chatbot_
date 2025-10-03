@@ -5,8 +5,7 @@ import { Input } from './../component/ui/input';
 import { Bot, Send, FileCheck } from 'lucide-react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { toast } from 'sonner';
-
-const DEEPSEEK_API_KEY = 'sk-925ed15fe6f047a58cab583bc1b99599';
+import { supabase } from '@/integrations/supabase/client';
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -45,50 +44,19 @@ const Chat = () => {
     setIsLoading(true);
 
     try {
-      const systemPrompt = `أنت رزن، أخصائي تغذية محترف. مهمتك طرح 10 أسئلة محددة لفهم النمط الغذائي والصحي للمستخدم.
-      
-معلومات المستخدم:
-- الاسم: ${userData?.name}
-- العمر: ${userData?.age} سنة
-- الجنس: ${userData?.gender === 'male' ? 'ذكر' : 'أنثى'}
-- الوزن: ${userData?.weight} كجم
-- الطول: ${userData?.height} سم
-
-قم بطرح الأسئلة التالية بالترتيب:
-1. ما هو هدفك الرئيسي؟ (خسارة وزن، زيادة وزن، الحفاظ على الوزن الحالي)
-2. كم وجبة تتناول يومياً؟
-3. هل تعاني من أي حساسية غذائية أو أمراض مزمنة؟
-4. ما هو مستوى نشاطك البدني؟ (قليل، متوسط، عالي)
-5. كم كوب ماء تشرب يومياً؟
-6. هل تتناول وجبات سريعة؟ وكم مرة في الأسبوع؟
-7. ما هي الأطعمة المفضلة لديك؟
-8. هل تفضل نظام غذائي معين؟ (نباتي، كيتو، متوازن، إلخ)
-9. هل لديك أي قيود على أوقات الوجبات؟
-10. ما هي الأطعمة التي لا تحبها أو تتجنبها؟
-
-أنت الآن في السؤال رقم ${questionCount + 1}. اطرح سؤالاً واحداً فقط في كل مرة، وكن ودوداً ومحفزاً.`;
-
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...newHistory
-          ],
-          temperature: 0.7,
-        })
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: { 
+          messages: newHistory,
+          userData,
+          questionCount 
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('فشل الاتصال بالخادم');
+      if (error) {
+        console.error('Error:', error);
+        throw new Error(error.message || 'فشل الاتصال بالخادم');
       }
 
-      const data = await response.json();
       const assistantMessage = {
         role: 'assistant' as const,
         content: data.choices[0].message.content
@@ -107,48 +75,18 @@ const Chat = () => {
   const generateMealPlan = async () => {
     setIsLoading(true);
     try {
-      const systemPrompt = `أنت أخصائي تغذية خبير. بناءً على المعلومات التالية، قم بإنشاء خطة غذائية أسبوعية مفصلة:
-
-معلومات المستخدم:
-- الاسم: ${userData?.name}
-- العمر: ${userData?.age} سنة
-- الجنس: ${userData?.gender === 'male' ? 'ذكر' : 'أنثى'}
-- الوزن: ${userData?.weight} كجم
-- الطول: ${userData?.height} سم
-
-تاريخ المحادثة:
-${chatHistory.map(msg => `${msg.role === 'user' ? 'المستخدم' : 'رزن'}: ${msg.content}`).join('\n')}
-
-قم بإنشاء خطة غذائية تتضمن:
-1. حساب السعرات الحرارية اليومية المطلوبة
-2. توزيع الماكروز (بروتين، كربوهيدرات، دهون)
-3. خطة وجبات مفصلة لمدة 7 أيام (الإفطار، الغداء، العشاء، وجبات خفيفة)
-4. نصائح صحية مخصصة
-5. توصيات للمياه والنشاط البدني
-
-قدم الخطة بتنسيق واضح ومنظم.`;
-
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: 'أنشئ لي خطة غذائية أسبوعية كاملة' }
-          ],
-          temperature: 0.7,
-        })
+      const { data, error } = await supabase.functions.invoke('generate-meal-plan', {
+        body: { 
+          userData,
+          chatHistory 
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('فشل إنشاء الخطة الغذائية');
+      if (error) {
+        console.error('Error:', error);
+        throw new Error(error.message || 'فشل إنشاء الخطة الغذائية');
       }
 
-      const data = await response.json();
       const plan = data.choices[0].message.content;
       setMealPlan(plan);
       navigate('/meal-plan');
